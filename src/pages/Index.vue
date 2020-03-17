@@ -1,6 +1,6 @@
 <template>
   <q-page class="flex flex-center">
-    <q-btn
+    <!-- <q-btn
     v-if="!isTracking"
     style="position:fixed;z-index:2999;bottom:30px;width:62px;height:62px;"
     round
@@ -17,7 +17,7 @@
     color="red"
     big
     @click="stopTracking"
-    />
+    /> -->
     <l-map
       ref="map"
       :zoom="zoom"
@@ -106,12 +106,12 @@
                   {
                     label: 'Pessoa',
                     icon: 'person',
-                    value: 'pessoa'
+                    value: 'Pessoa'
                   },
                   {
                     label: 'Animal',
                     icon: 'pets',
-                    value: 'animal'
+                    value: 'Animal'
                   },
                 ]"
               />
@@ -237,7 +237,7 @@ export default {
       return (S4() + S4() + '-' + S4() + '-' + S4() + '-' + S4() + '-' + S4() + S4() + S4())
     },
     add () {
-      if (this.currentSelection === 'pessoa') {
+      if (this.currentSelection === 'Pessoa') {
         this.people.push({id: this.genID(), name: this.form.name, phone: this.form.phone, location: this.currentLocation})
       } else {
         this.animals.push({id: this.genID(), name: this.form.name, phone: this.form.phone, location: this.currentLocation})
@@ -270,9 +270,19 @@ export default {
         this.heatmap.push(mapLocation)
       }
     },
+    sendPush (body, title) {
+      Notification.requestPermission(function (status) {
+        console.log('Status ', status)
+      })
+      var options = {
+        body: body
+      }
+      new Notification(title, options) // eslint-disable-line no-new
+    },
     recenter () {
       // alert('teste')
       let self = this
+      // this.sendPush('teste', 'testing notification')
       var options = { maximumAge: 3000, timeout: 5000, enableHighAccuracy: true }
 
       navigator.geolocation.getCurrentPosition(function (position) {
@@ -340,6 +350,7 @@ export default {
     this.$root.$on('enable-layer', this.toggleLayer)
     this.$root.$on('recenter', this.recenter)
     this.recenter()
+    this.startTracking()
   }
 }
 </script>
