@@ -3,18 +3,17 @@
 module.exports = function (ctx) {
   return {
     // app plugins (/src/plugins)
-    plugins: [
+    boot: [
       'axios'
     ],
     css: [
       'app.styl'
     ],
     extras: [
-      ctx.theme.mat ? 'roboto-font' : null,
-      'material-icons' // optional, you are not bound to it
+      'material-icons', // optional, you are not bound to it
       // 'ionicons',
       // 'mdi',
-      // 'fontawesome'
+      'fontawesome-v5'
     ],
     supportIE: false,
     build: {
@@ -42,29 +41,27 @@ module.exports = function (ctx) {
     framework: {
       components: [
         'QLayout',
-        'QLayoutHeader',
-        'QLayoutDrawer',
+        'QHeader',
+        'QDrawer',
         'QPageContainer',
         'QPage',
         'QToolbar',
         'QToolbarTitle',
         'QBtn',
+        'QToggle',
+        'QBtnGroup',
+        'QDialog',
         'QIcon',
         'QList',
-        'QListHeader',
         'QItem',
-        'QItemMain',
-        'QItemSide',
         'QFab',
         'QFabAction',
-        'QModal',
         'QField',
         'QSelect',
         'QInput'
       ],
       directives: [
         'Ripple',
-        'CloseOverlay'
       ],
       // Quasar plugins
       plugins: [

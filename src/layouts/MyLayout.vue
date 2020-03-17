@@ -1,29 +1,37 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-layout-header>
+    <q-header>
       <q-toolbar
         color="red-7"
         :inverted="$q.theme === 'ios'"
       >
+        <q-toolbar-title>
+          Location Tool
+          <div slot="subtitle">Report</div>
+        </q-toolbar-title>
+        <q-btn
+        flat
+        dense
+        round
+        icon="my_location"
+        @click="recenter"
+        />
         <q-btn
           flat
           dense
           round
-          @click="leftDrawerOpen = !leftDrawerOpen"
+          @click="rightDrawerOpen = !rightDrawerOpen"
           aria-label="Menu"
         >
-          <q-icon name="menu" />
+          <q-icon name="settings" />
         </q-btn>
 
-        <q-toolbar-title>
-          Brumadinho Location Tool
-          <div slot="subtitle">Location estimative on Brumadinho disaster</div>
-        </q-toolbar-title>
       </q-toolbar>
-    </q-layout-header>
+    </q-header>
 
-    <q-layout-drawer
-      v-model="leftDrawerOpen"
+    <q-drawer
+    side='right'
+      v-model="rightDrawerOpen"
       :content-class="$q.theme === 'mat' ? 'bg-grey-2' : null"
     >
       <q-list
@@ -31,17 +39,29 @@
         link
         inset-delimiter
       >
-        <q-list-header>Menu Principal</q-list-header>
-        <q-item @click.native="openURL('http://quasar-framework.org')">
-          <q-item-side icon="person" />
-          <q-item-main label="Pessoas Desaparecidas" sublabel="Listar ou adicionar pessoas desaparecidas" />
+        <q-item>Menu Principal</q-item>
+        <q-item>
+          <q-toggle @change="togglePersonIcons" v-model="personIcons" color="red-7" icon="person" label="Ícones de pessoas" />
         </q-item>
-        <q-item @click.native="openURL('https://github.com/quasarframework/')">
-          <q-item-side icon="pets" />
-          <q-item-main label="Animais Desaparecidos" sublabel="Listar ou adicionar animais desaparecidos" />
+        <q-item>
+          <q-toggle @change="toggleAnimalIcons" v-model="animalIcons" color="red-7" icon="pets" label="Ícones de animais" />
+        </q-item>
+        <q-item>
+          <q-toggle @change="toggleSearchIcons" v-model="searchIcons" color="red-7" icon="search" label="Ícones de buscas" />
+        </q-item>
+        <q-item>
+          <q-toggle v-model="heatmapLayer" color="red-7" icon="layers" label="Mapa de calor" />
+        </q-item>
+        <q-item>
+        <q-btn-group
+          color="red-7"
+          type="radio"
+          v-model="currentLayer"
+          :options="layers"
+        />
         </q-item>
       </q-list>
-    </q-layout-drawer>
+    </q-drawer>
 
     <q-page-container>
       <router-view />
@@ -50,17 +70,68 @@
 </template>
 
 <script>
-import { openURL } from 'quasar'
 
 export default {
   name: 'MyLayout',
   data () {
     return {
-      leftDrawerOpen: false
+      rightDrawerOpen: false,
+      heatmapLayer: true,
+      searchIcons: false,
+      personIcons: true,
+      animalIcons: true,
+      satelliteLayer: false,
+      topologyLayer: false,
+      currentLayer: 'map',
+      layers: [
+        {label: 'Mapa', value: 'map'},
+        {label: 'Satélite', value: 'satellite'},
+        {label: 'Topologia', value: 'topology'}
+      ]
+    }
+  },
+  watch: {
+    heatmapLayer: function (val) {
+      this.$root.$emit('enable-Heatmap', val)
+    },
+    searchIcons: function (val) {
+      this.$root.$emit('enable-searchIcons', val)
+    },
+    personIcons: function (val) {
+      this.$root.$emit('enable-personIcons', val)
+    },
+    animalIcons: function (val) {
+      this.$root.$emit('enable-animalIcons', val)
+    },
+    currentLayer: function (val) {
+      this.$root.$emit('enable-layer', val)
     }
   },
   methods: {
-    openURL
+    toggleHeatmap () {
+      console.log('teste')
+      this.$root.$emit('enable-Heatmap', 'true')
+    },
+    toggleSearchIcons () {
+      this.$root.$emit('enable-searchIcons', this.searchIcons)
+    },
+    togglePersonIcons () {
+      this.$root.$emit('enable-personIcons', this.personIcons)
+    },
+    toggleAnimalIcons () {
+      this.$root.$emit('enable-animalIcons', this.animalIcons)
+    },
+    toggleSatellite () {
+      this.$root.$emit('enable-satellite', this.satelliteLayer)
+    },
+    toggleTopology () {
+      this.$root.$emit('enable-topology', this.topologyLayer)
+    },
+    recenter () {
+      this.$root.$emit('recenter', true)
+    }
+  },
+  mounted () {
   }
 }
 </script>

@@ -2,7 +2,7 @@
   <q-page class="flex flex-center">
     <q-btn
     v-if="!isTracking"
-    style="position:fixed;z-index:10000;right:30px;top:10px;width:62px;height:62px;"
+    style="position:fixed;z-index:2999;bottom:30px;width:62px;height:62px;"
     round
     icon="my_location"
     color="red"
@@ -11,7 +11,7 @@
     />
     <q-btn
     v-if="isTracking"
-    style="position:fixed;z-index:10000;right:30px;top:10px;width:62px;height:62px;"
+    style="position:fixed;z-index:2999;bottom:30px;width:62px;height:62px;"
     round
     icon="stop"
     color="red"
@@ -19,6 +19,7 @@
     @click="stopTracking"
     />
     <l-map
+      ref="map"
       :zoom="zoom"
       :center="center"
       :options="mapOptions"
@@ -27,12 +28,12 @@
       @update:zoom="zoomUpdate"
       @click="clickMap"
     >
-
-      <l-tile-layer
-        :url="url"
-        :attribution="attribution"
-      />
-      <l-marker v-for="person in people" :key="person.id" :lat-lng="person.location">
+    <LeafletHeatmap v-if="display.heatmapLayer" :lat-lng="heatmap" :max="maxValue" :radius="30"></LeafletHeatmap>
+    <l-tile-layer
+      :url='layers[currentLayer].url'
+      :attribution='layers[currentLayer].attribution'
+    />
+      <l-marker v-if="display.personIcons" v-for="person in people" :key="person.id" :lat-lng="person.location">
         <l-icon
           :icon-size="[32, 32]"
           :icon-anchor="[16, 32]"
@@ -51,7 +52,7 @@
           </div>
         </l-popup>
       </l-marker>
-      <l-marker v-for="animal in animals" :key="animal.id" :lat-lng="animal.location">
+      <l-marker v-if="display.animalIcons" v-for="animal in animals" :key="animal.id" :lat-lng="animal.location">
         <l-icon
           :icon-size="[32, 32]"
           :icon-anchor="[16, 32]"
@@ -64,12 +65,12 @@
               <br />
               Contato (familiar):<br /> {{animal.phone}}
               <br />
-              <q-btn @click="removePerson(person.id)">Remover</q-btn>
+              <q-btn @click="removeAnimal(animal.id)">Remover</q-btn>
             </p>
           </div>
         </l-popup>
       </l-marker>
-      <l-marker v-for="search in searches" :key="search.id" :lat-lng="search.location">
+      <l-marker v-if="display.searchIcons" v-for="search in searches" :key="search.id" :lat-lng="search.location">
         <l-icon
           :icon-size="[32, 32]"
           :icon-anchor="[16, 32]"
@@ -88,11 +89,13 @@
         </l-popup>
       </l-marker>
     </l-map>
-    <q-modal v-model="showAddModal">
-      <div style="width:300px; float:left;padding:4%;">
+    <q-dialog v-model="showAddModal">
+      <div style="width:300px; float:left;padding:4%; opacity: 0.8; background-color:#fff;">
         <div class="row">
-          <span>Cadastrar</span>
+          <span><b>Cadastrar</b></span>
+
         </div>
+        <br />
         <div class="row">
           <span>Tipo</span>
             <q-field style="width: 100%;">
@@ -121,15 +124,17 @@
         </div>
         <div class="row">
           <q-field style="width: 100%;">
-            <q-input v-model="form.phone" float-label="Telefone de contato (familiar)" />
+            <q-input v-model="form.phone" type="tel" float-label="Telefone de contato" />
           </q-field>
         </div>
+        <br />
         <div class="row fix-right" style="float:right;">
         <q-btn
           color="primary"
           @click="add"
           label="Cadastrar"
         />
+        &nbsp;
         <q-btn
           color="red"
           @click="showAddModal = false"
@@ -137,7 +142,7 @@
         />
       </div>
       </div>
-    </q-modal>
+    </q-dialog>
 
   </q-page>
 </template>
@@ -151,6 +156,7 @@
 
 <script>
 import { L, LMap, LTileLayer, LMarker, LPopup, LTooltip, LIcon } from 'vue2-leaflet'
+import LeafletHeatmap from 'vue2-leaflet-heatmap'
 
 export default {
   name: 'PageIndex',
@@ -160,7 +166,8 @@ export default {
     LMarker,
     LPopup,
     LTooltip,
-    LIcon
+    LIcon,
+    LeafletHeatmap
   },
   data () {
     return {
@@ -174,15 +181,16 @@ export default {
       watcher: null,
       isTracking: false,
       currentLocation: null,
-      url: 'http://{s}.tile.osm.org/{z}/{x}/{y}.png',
+      currentLayer: 'map',
+      maxValue: null,
       iconSize: 64,
-      attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
       people: [
         {id: 1, name: 'João', photo: '', phone: '31 9999-9999', showInfo: true, location: L.latLng(-20.135896, -44.123509)},
         {id: 2, name: 'Marcelo', photo: '', phone: '31 9999-9999', showInfo: true, location: L.latLng(-20.145896, -44.123509)}
       ],
       animals: [],
       searches: [],
+      heatmap: [],
       currentZoom: 14.5,
       currentCenter: L.latLng(47.413220, -1.219482),
       showParagraph: false,
@@ -193,6 +201,29 @@ export default {
         name: '',
         phone: '',
         photo: ''
+      },
+      display: {
+        heatmapLayer: true,
+        searchIcons: false,
+        personIcons: true,
+        animalIcons: true,
+        satelliteLayer: false,
+        topologyLayer: false
+      },
+      layers: {
+        map: {
+          url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        },
+        satellite: {
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        },
+        topology: {
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+          maxZoom: 17,
+          attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+        }
       }
     }
   },
@@ -214,8 +245,9 @@ export default {
       this.showAddModal = false
     },
     startTracking () {
+      var options = { maximumAge: 3000, timeout: 5000, enableHighAccuracy: true }
       if (navigator.geolocation) {
-        this.watcher = navigator.geolocation.watchPosition(this.registerLocation)
+        this.watcher = navigator.geolocation.watchPosition(this.registerLocation, null, options)
         this.isTracking = true
       } else {
         alert('Geo Location not supported by browser')
@@ -226,17 +258,34 @@ export default {
       this.isTracking = false
     },
     registerLocation (position) {
-      let location = {
+      var location = {
         longitude: position.coords.longitude,
         latitude: position.coords.latitude
       }
       if (location !== this.lastPosition) {
-        console.log(location)
         this.lastPosition = location
-        let mapLocation = L.latLng(location.latitude, location.longitude)
+        var mapLocation = L.latLng(location.latitude, location.longitude)
         this.center = mapLocation
         this.searches.push({id: this.genID(), name: this.form.name, time: new Date().toLocaleTimeString(), location: mapLocation})
+        this.heatmap.push(mapLocation)
       }
+    },
+    recenter () {
+      // alert('teste')
+      let self = this
+      var options = { maximumAge: 3000, timeout: 5000, enableHighAccuracy: true }
+
+      navigator.geolocation.getCurrentPosition(function (position) {
+        console.log(position.coords.latitude, position.coords.longitude)
+        self.$refs.map.mapObject.flyTo([position.coords.latitude, position.coords.longitude], 17)
+        // self.center = L.latLng(position.coords.latitude, position.coords.longitude)
+        // self.centerUpdate(self.center)
+      },
+      function (error) {
+        console.log(error)
+        // self.center = L.latLng(position.coords.latitude, position.coords.longitude)
+        // self.centerUpdate(self.center)
+      }, options)
     },
     clickMap (event) {
       console.log(event)
@@ -252,8 +301,8 @@ export default {
     removePerson (id) {
       this.people = this.people.filter(function (el) { return el.id !== id })
     },
-    removeAnimal () {
-      // this.animals = this.animals.filter(function (el) { return el.id !== id })
+    removeAnimal (id) {
+      this.animals = this.animals.filter(function (el) { return el.id !== id })
     },
     zoomUpdate (zoom) {
       this.currentZoom = zoom
@@ -266,10 +315,31 @@ export default {
     },
     innerClick () {
       alert('Click!')
+    },
+    toggleHeatmapLayer (val) {
+      this.display.heatmapLayer = val
+    },
+    togglePersonIcons (val) {
+      this.display.personIcons = val
+    },
+    toggleSearchIcons (val) {
+      this.display.searchIcons = val
+    },
+    toggleAnimalIcons (val) {
+      this.display.animalIcons = val
+    },
+    toggleLayer (val) {
+      this.currentLayer = val
     }
   },
   mounted () {
-    console.log(LMap)
+    this.$root.$on('enable-personIcons', this.togglePersonIcons)
+    this.$root.$on('enable-animalIcons', this.toggleAnimalIcons)
+    this.$root.$on('enable-searchIcons', this.toggleSearchIcons)
+    this.$root.$on('enable-Heatmap', this.toggleHeatmapLayer)
+    this.$root.$on('enable-layer', this.toggleLayer)
+    this.$root.$on('recenter', this.recenter)
+    this.recenter()
   }
 }
 </script>
