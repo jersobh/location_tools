@@ -14,7 +14,7 @@
     "@quasar/extras": "^1.9.4",
     "axios": "^0.20.0",
     "firebase": "^7.15.0",
-    "quasar": "^1.12.13",
+    "quasar": "^1.13.2",
     "vue2-leaflet": "^1.2.3",
     "vue2-leaflet-heatmap": "^1.0.5"
   },
