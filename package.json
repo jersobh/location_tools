@@ -13,7 +13,7 @@
   "dependencies": {
     "@quasar/extras": "^1.9.5",
     "axios": "^0.20.0",
-    "firebase": "^7.22.1",
+    "firebase": "^9.15.0",
     "quasar": "^1.12.13",
     "vue2-leaflet": "^1.2.3",
     "vue2-leaflet-heatmap": "^1.0.5"
